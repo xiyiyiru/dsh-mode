@@ -8,7 +8,7 @@
 
 agent 对所有任务用同一种姿态是浪费：一句话的答案也煞有介事地规划，多步的重构却靠即兴发挥。模式引导治的是「阶段错配」——但前提是方法论恰好在工作方式变化的那一刻到位，并且不冒充永久规则。常驻提示词的教条有反向的失败模式：它稀释成模型不再阅读的墙纸。
 
-本插件让切换变得便宜（一次工具调用）、显式（记为会话事件）、不粘滞（系统提示词永不因切换而改变）。
+本插件让切换变得便宜（一次工具调用）、显式（每次切换都是可见的工具调用）、不粘滞（系统提示词永不因切换而改变）。0.1.0-rc.6 起工具完全无状态：切换即返回方法论、零会话事件写入。
 
 ## 五个模式
 
@@ -32,7 +32,7 @@ agent 对所有任务用同一种姿态是浪费：一句话的答案也煞有�
 ## 切换做什么（和不做什么）
 
 - ✅ 把该模式的方法论作为普通工具结果返回——恰好出现在它引导的阶段里
-- ✅ 记一条 `mycel/mode` 会话事件（最后一条生效）——抗压缩、跨 resume 存活
+- ✅ 0.1.0-rc.6 起完全无状态：零会话事件写入——没有日志契约可以踩坑
 - ✅ 幂等重切换：压缩之后切到**同一个**模式即可重读方法论——这就是恢复路径
 - ❌ 永不修改系统提示词
 - ❌ 不在回退或后续任何回合被重复注入
@@ -56,7 +56,6 @@ peer 依赖（`@deepseek-ai/cordis`、`dsh-agent`、`dsh-session`、`dsh-tools`�
 import {
   MODES, CORE_BEHAVIOR, MODE_NAMES, DEFAULT_MODE,
   SWITCH_MODE, SWITCH_MODE_DESCRIPTION,
-  effectiveMode, foldMode,
   type ModeName, type ModeSpec,
 } from '@xiyiyiru/dsh-mode'
 ```
@@ -67,10 +66,8 @@ import {
 | `CORE_BEHAVIOR` | 静态核心准则段文本 |
 | `MODE_NAMES` / `DEFAULT_MODE` | 工具的枚举值 / `'base'` |
 | `SWITCH_MODE` / `SWITCH_MODE_DESCRIPTION` | 工具名与面向模型描述 |
-| `foldMode(events)` | 折叠会话日志：当前生效的模式，首次切换前为 `undefined` |
-| `effectiveMode(events)` | `foldMode(events) ?? 'base'`——永不返回 undefined |
 
-会话事件：`mycel/mode` `{ mode: ModeName }`——仅记日志、非表面、整体替换语义。
+会话集成：无。0.1.0-rc.6 起工具完全无状态——切换即返回方法论，零会话事件写入。
 
 ## 设计说明
 

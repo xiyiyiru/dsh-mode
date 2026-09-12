@@ -46,12 +46,8 @@ test('mycel:core-behavior is the only mode-owned system-prompt section', () => {
 // ── 五模式（2026-09-03 v6：引导式重写——方法论随切换注入引导本阶段，非硬性清单） ──
 
 import {
-  CORE_BEHAVIOR, DEFAULT_MODE, MODES, MODE_NAMES, SWITCH_MODE_DESCRIPTION, effectiveMode, foldMode,
+  CORE_BEHAVIOR, DEFAULT_MODE, MODES, MODE_NAMES, SWITCH_MODE_DESCRIPTION,
 } from '../src/index.ts'
-
-function modeEvent(mode: string): { type: 'mycel/mode'; data: { mode: never } } {
-  return { type: 'mycel/mode', data: { mode: mode as never } }
-}
 
 test('五模式齐备：base 为默认态，switch_mode 枚举含 base', () => {
   assert.deepEqual([...MODE_NAMES], ['base', 'planner', 'analyst', 'explorer', 'executor'])
@@ -59,11 +55,15 @@ test('五模式齐备：base 为默认态，switch_mode 枚举含 base', () => {
   for (const name of MODE_NAMES) assert.ok(MODES[name] !== undefined, `${name} spec present`)
 })
 
-test('effectiveMode：无切换史投影 base，切换史取最后事件', () => {
-  assert.equal(effectiveMode([]), 'base')
-  assert.equal(effectiveMode([modeEvent('planner')]), 'planner')
-  assert.equal(effectiveMode([modeEvent('planner'), modeEvent('executor')]), 'executor')
-  assert.equal(foldMode([]), undefined, 'foldMode 保持 undefined 语义（渲染层决定默认）')
+test('execute 无状态：无 agent 也直接返回方法论，不写任何事件（rc.6 起）', async () => {
+  const tool = registeredTools().find(t => t.name === 'switch_mode')
+  assert.ok(tool !== undefined, 'switch_mode registered')
+  // exec 不带 agent——旧版在这里抛"requires a calling agent"，新版必须纯返回
+  const result = await tool.execute({ mode: 'planner' }, {}) as { mode: string; mindset: string }
+  assert.equal(result.mode, 'planner')
+  assert.equal(result.mindset, MODES.planner.mindset)
+  const repeated = await tool.execute({ mode: 'planner' }, {}) as { mindset: string }
+  assert.equal(repeated.mindset, MODES.planner.mindset, '重复切换幂等重读')
 })
 
 // ── v6 引导式准则：默认直给 + 例外协议（改半个字即红） ──

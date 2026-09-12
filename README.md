@@ -10,7 +10,7 @@ Working modes for [dsh](https://github.com/deepseek-ai/deepseek-harness) agents:
 
 Agents waste turns when they apply one posture to every task: planning a one-line answer, or improvising a multi-step refactor. Mode guidance fixes the *phase mismatch* — but only if it arrives exactly when the work style changes, and stops pretending to be permanent rules. Standing prompt-law has the opposite failure: it dilutes into wallpaper the model stops reading.
 
-This plugin makes switching cheap (one tool call), explicit (logged as a session event), and non-sticky (the system prompt never changes because of a switch).
+This plugin makes switching cheap (one tool call), explicit (a visible tool call each time), and non-sticky (the system prompt never changes because of a switch). The tool is stateless since 0.1.0-rc.6: a switch returns the methodology as its ordinary result and writes zero session events.
 
 ## The five modes
 
@@ -34,7 +34,7 @@ Each mode's full methodology (mindset) is returned verbatim as the `switch_mode`
 ## What a switch does (and does not do)
 
 - ✅ returns the mode's methodology as the ordinary tool result — visible in exactly the phase it guides
-- ✅ logs a `mycel/mode` session event (last one wins) — survives compaction and resume
+- ✅ stateless since 0.1.0-rc.6: writes zero session events — no log contract to trip on
 - ✅ idempotent re-switch: after compaction, switching to the *same* mode re-reads its methodology — that is the recovery path
 - ❌ does not modify the system prompt, ever
 - ❌ is not re-injected on retreat or on any later turn
@@ -58,7 +58,6 @@ Peer dependencies (`@deepseek-ai/cordis`, `dsh-agent`, `dsh-session`, `dsh-tools
 import {
   MODES, CORE_BEHAVIOR, MODE_NAMES, DEFAULT_MODE,
   SWITCH_MODE, SWITCH_MODE_DESCRIPTION,
-  effectiveMode, foldMode,
   type ModeName, type ModeSpec,
 } from '@xiyiyiru/dsh-mode'
 ```
@@ -69,10 +68,8 @@ import {
 | `CORE_BEHAVIOR` | the static core-principles section text |
 | `MODE_NAMES` / `DEFAULT_MODE` | the tool's enum values / `'base'` |
 | `SWITCH_MODE` / `SWITCH_MODE_DESCRIPTION` | the tool's name and model-facing description |
-| `foldMode(events)` | fold a session log: the mode in force, or `undefined` before the first switch |
-| `effectiveMode(events)` | `foldMode(events) ?? 'base'` — never undefined |
 
-Session event: `mycel/mode` `{ mode: ModeName }` — log-only, non-surface, whole-value replace.
+Session integration: none. Since 0.1.0-rc.6 the tool is stateless — a switch returns the methodology as its ordinary result and writes zero session events.
 
 ## Design notes
 

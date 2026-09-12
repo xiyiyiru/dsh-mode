@@ -1,29 +1,23 @@
 /**
- * mycel working modes: a `switch_mode` tool whose selection is logged per agent
- * (`mycel/mode`, last one wins) and whose selected methodology is returned as
- * the ordinary tool result — guidance injected at the moment of the switch for
- * the phase ahead, not standing law: it is not repeated, not re-injected on
- * retreat, and the system prompt never changes because of a switch. The
- * mode-independent core-behavior section is the only mode-owned system-prompt
- * contribution. Fully decoupled from @mycel/dsh-state since 2026-09-03: the
- * focus stack no longer snapshots or restores the seat — re-switching the same
- * mode (idempotent) is the recovery path after compaction.
+ * mycel working modes: a `switch_mode` tool whose selected methodology is
+ * returned as the ordinary tool result — guidance injected at the moment of the
+ * switch for the phase ahead, not standing law: it is not repeated, not
+ * re-injected on retreat, and the system prompt never changes because of a
+ * switch. The mode-independent core-behavior section is the only mode-owned
+ * system-prompt contribution. Writes zero session events since 0.1.0-rc.6 —
+ * the tool is stateless: re-switching the same mode (idempotent) is the
+ * recovery path after compaction. No session integration of any kind.
  *
  * @module @xiyiyiru/dsh-mode
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-// Type-only edge: brings the `agent` field of AssembleContext into the section
-// provider's context type (declared by dsh-agent through declaration merging).
-import type {} from '@deepseek-ai/dsh-agent'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 
-/** The five working modes a session can hold. */
+/** The five working modes. */
 export type ModeName = 'base' | 'planner' | 'analyst' | 'explorer' | 'executor'
 
-/** The mode a session renders before its first switch: the plain default posture. */
+/** The plain default posture before any switch. */
 export const DEFAULT_MODE: ModeName = 'base'
 
 /** One working mode: its methodology text and when to choose it. */
@@ -34,18 +28,6 @@ export interface ModeSpec {
   readonly mindset: string
   /** One-phrase scenario naming when this mode fits. */
   readonly triggerScenario: string
-}
-
-declare module '@deepseek-ai/dsh-session/types' {
-  interface SessionEventMap {
-    /**
-     * Which working mode is in force from this point on: log-only,
-     * non-surface, whole-value replace. The last `mycel/mode` wins; a log
-     * with none renders {@link DEFAULT_MODE} through {@link effectiveMode}.
-     * @param data.mode - the selected {@link ModeName}.
-     */
-    'mycel/mode': { mode: ModeName }
-  }
 }
 
 /** The model-facing mode tool's name. */
@@ -142,35 +124,6 @@ export const MODES: Readonly<Record<ModeName, ModeSpec>> = {
 /** All mode names, as the parameter enum of the `switch_mode` tool. */
 export const MODE_NAMES: readonly ModeName[] = ['base', 'planner', 'analyst', 'explorer', 'executor']
 
-/**
- * The mode in force after the first `end` events. The last `mycel/mode` wins;
- * a prefix with none is mode-less.
- * @param events - the session log or any prefix of it.
- * @param end - fold `events[0, end)`; defaults to the whole log.
- * @returns the mode in force, or `undefined` before the first switch.
- */
-export function foldMode(events: readonly SessionEvent[], end = events.length): ModeName | undefined {
-  let mode: ModeName | undefined
-  let index = 0
-  for (const event of events) {
-    if (index >= end) break
-    index++
-    if (event.type === 'mycel/mode') mode = event.data.mode
-  }
-  return mode
-}
-
-/**
- * The mode a session renders: its folded switch history, or {@link DEFAULT_MODE}
- * before the first switch. There is no mode-less vacuum — every request lives
- * inside some methodology (base is the default posture until a switch happens).
- * @param events - the session log or any prefix of it.
- * @returns the effective mode, never `undefined`.
- */
-export function effectiveMode(events: readonly SessionEvent[]): ModeName {
-  return foldMode(events) ?? DEFAULT_MODE
-}
-
 /** Prompt order of the static core-behavior section: right after the persona (0), before tool guidance (100+). */
 const SECTION_ORDER = 10
 
@@ -213,12 +166,7 @@ export function apply(ctx: Context): void {
         text: `已切换到 ${value.mode}。以下方法论引导本阶段工作:\n\n${value.mindset}`,
       }],
     },
-    execute(args, exec) {
-      const agent: Agent | undefined = exec.agent
-      if (agent === undefined) {
-        throw new Error(`${SWITCH_MODE} requires a calling agent (no session to record the mode)`)
-      }
-      agent.session.append('mycel/mode', { mode: args.mode })
+    execute(args) {
       return Promise.resolve({ mode: args.mode, mindset: MODES[args.mode].mindset })
     },
     presentCall: args => ({ card: 'generic', title: `Switch mode → ${args.mode}`, kind: 'other' }),

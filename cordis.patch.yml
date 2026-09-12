@@ -1,9 +1,7 @@
 # mycel mode bundle layer: the working-modes plugin over dsh-base.
 # Applies after the profile's base layers; the single inserted row registers
-# the static `mycel:core-behavior` system-prompt section and the `switch_mode`
-# tool. The invariant companion (`@xiyiyiru/dsh-mode/invariant`) is deliberately
-# not mounted here: it injects the `invariants` service, which stock dsh
-# profiles do not compose — mycel's own hub assembly mounts it instead.
+# the static `mycel:core-behavior` system-prompt section and the stateless
+# `switch_mode` tool (methodology as its ordinary result, zero session events).
 
 - insert:
     - id: mycel-mode
